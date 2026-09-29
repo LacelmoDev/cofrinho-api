@@ -32,6 +32,7 @@ class ContasTests(APITestCase):
         l = self.client.post('/api/auth/login/', {'identificador': 'maria', 'senha': 'segredo1'}, format='json')
         self.assertEqual(l.status_code, 403)
         self.assertEqual(l.data['codigo'], 'email_nao_verificado')
+        self.assertEqual(l.data['email'], 'maria@exemplo.com')
         # código errado
         v = self.client.post('/api/auth/verificar-email/', {'email': DADOS['email'], 'codigo': '000000'}, format='json')
         self.assertEqual(v.status_code, 400)

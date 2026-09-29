@@ -117,7 +117,8 @@ class Login(APIView):
         if not u or not u.check_password(d['senha']) or not u.is_active:
             return erro('Utilizador/email ou senha incorrectos.', 'credenciais_invalidas')
         if not u.email_verificado:
-            return erro('Ainda não confirmaste o teu email.', 'email_nao_verificado', status.HTTP_403_FORBIDDEN)
+            return Response({'erro': 'Ainda não confirmaste o teu email.', 'codigo': 'email_nao_verificado', 'email': u.email},
+                            status=status.HTTP_403_FORBIDDEN)
         chave = Sessao.criar(u, d['dispositivo'])
         return Response({'token': chave, 'perfil': u.perfil()})
 
