@@ -8,7 +8,8 @@ from rest_framework.test import APITestCase
 from .models import CodigoEmail, Sessao, Utilizador
 
 DADOS = {'nomeCompleto': 'Maria Silva', 'username': 'maria', 'telefone': '923456789',
-         'email': 'maria@exemplo.com', 'senha': 'segredo1'}
+         'email': 'maria@exemplo.com', 'senha': 'segredo1',
+         'aceitaTermos': True, 'maiorDeIdade': True, 'termosVersao': '2026-09-30'}
 
 
 @override_settings(DEBUG=True)

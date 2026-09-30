@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -9,8 +10,8 @@ from rest_framework.views import APIView
 from .codigos import EsperaNecessaria, criar_codigo, validar_codigo
 from .emails import enviar_codigo
 from .models import CodigoEmail, Sessao, Utilizador, hash_chave
-from .serializers import (ConfirmarResetSerializer, EmailSerializer, LoginSerializer, PerfilSerializer,
-                          RegistarSerializer, VerificarSerializer)
+from .serializers import (ConfirmarResetSerializer, EliminarContaSerializer, EmailSerializer, LoginSerializer,
+                          PerfilSerializer, RegistarSerializer, VerificarSerializer)
 
 
 def erro(mensagem, codigo, http=status.HTTP_400_BAD_REQUEST):
@@ -67,6 +68,8 @@ class Registar(APIView):
         u.telefone = d['telefone']
         u.password = make_password(d['senha'])
         u.email_verificado = False
+        u.termos_aceites_em = timezone.now()
+        u.termos_versao = d['termosVersao']
         u.save()
         return _resposta_codigo(u, CodigoEmail.VERIFICACAO, status.HTTP_201_CREATED)
 
@@ -185,3 +188,41 @@ class ConfirmarReset(APIView):
         u.save(update_fields=['password'])
         u.sessoes.all().delete()  # termina a sessão em todos os dispositivos
         return Response({'ok': True})
+
+
+class ExportarDados(APIView):
+    """Direito de acesso/portabilidade: todos os dados da conta num ficheiro JSON."""
+    throttle_scope = 'sync'
+
+    def get(self, request):
+        from sync.views import sair_categoria, sair_meta, sair_transacao  # evita import circular
+
+        u = request.user
+        return Response({
+            'exportadoEm': timezone.now().isoformat(),
+            'conta': {
+                **u.perfil(),
+                'criadaEm': u.date_joined.isoformat(),
+                'termosAceitesEm': u.termos_aceites_em.isoformat() if u.termos_aceites_em else None,
+                'termosVersao': u.termos_versao,
+            },
+            'categorias': [sair_categoria(o) for o in u.categorias.filter(apagado=False)],
+            'transacoes': [sair_transacao(o) for o in u.transacoes.filter(apagado=False)],
+            'metas': [sair_meta(o) for o in u.metas.filter(apagado=False)],
+        })
+
+
+class EliminarConta(APIView):
+    """Direito ao apagamento: apaga a conta e tudo o que lhe pertence (sessões, códigos, registos)."""
+    throttle_scope = 'auth'
+
+    def post(self, request):
+        s = EliminarContaSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        u = request.user
+        if u.is_staff or u.is_superuser:
+            return erro('Contas de administração não se eliminam por aqui.', 'conta_protegida', status.HTTP_403_FORBIDDEN)
+        if not u.check_password(s.validated_data['senha']):
+            return erro('Senha incorrecta.', 'senha_incorrecta')
+        u.delete()  # CASCADE: sessões, códigos, categorias, transacções e metas
+        return Response(status=status.HTTP_204_NO_CONTENT)

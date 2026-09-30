@@ -13,6 +13,9 @@ class Utilizador(AbstractUser):
     email_verificado = models.BooleanField(default=False)
     # Sempre "gratuito" por agora. A monetização vem depois.
     estado_assinatura = models.CharField(max_length=20, default='gratuito')
+    # Prova do consentimento (Termos + Política de Privacidade + maioridade) dado no registo
+    termos_aceites_em = models.DateTimeField(null=True, blank=True)
+    termos_versao = models.CharField(max_length=20, blank=True)
 
     REQUIRED_FIELDS = ['email']
 

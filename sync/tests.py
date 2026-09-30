@@ -16,7 +16,8 @@ def t(hora):
 def nova_conta(username):
     c = APIClient()
     d = {'nomeCompleto': 'Utilizador Teste', 'username': username, 'telefone': '923456789',
-         'email': f'{username}@exemplo.com', 'senha': 'segredo1'}
+         'email': f'{username}@exemplo.com', 'senha': 'segredo1',
+         'aceitaTermos': True, 'maiorDeIdade': True, 'termosVersao': '2026-09-30'}
     r = c.post('/api/auth/registar/', d, format='json')
     v = c.post('/api/auth/verificar-email/', {'email': d['email'], 'codigo': r.data['codigoDev']}, format='json')
     c.credentials(HTTP_AUTHORIZATION=f'Bearer {v.data["token"]}')
